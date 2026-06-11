@@ -32,3 +32,4 @@ class Documento(Base):
     estructuras = relationship(
         "Estructura", back_populates="documento", cascade="all, delete-orphan"
     )
+    plantillas = relationship("Plantilla", back_populates="documento")

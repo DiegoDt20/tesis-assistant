@@ -25,3 +25,4 @@ class Usuario(Base):
     )
 
     documentos = relationship("Documento", back_populates="usuario", cascade="all, delete-orphan")
+    plantillas = relationship("Plantilla", back_populates="usuario", cascade="all, delete-orphan")
