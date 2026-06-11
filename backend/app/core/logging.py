@@ -1,0 +1,16 @@
+"""Configuración de logging estructurado."""
+import logging
+import sys
+
+
+def setup_logging(level: str = "INFO") -> None:
+    fmt = "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s"
+    logging.basicConfig(
+        level=level,
+        format=fmt,
+        handlers=[logging.StreamHandler(sys.stdout)],
+    )
+
+
+def get_logger(name: str) -> logging.Logger:
+    return logging.getLogger(name)
