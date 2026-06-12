@@ -39,3 +39,4 @@ class Plantilla(Base):
     # Relaciones
     usuario = relationship("Usuario", back_populates="plantillas")
     documento = relationship("Documento", back_populates="plantillas")
+    proyectos = relationship("Proyecto", back_populates="plantilla")
