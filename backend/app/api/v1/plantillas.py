@@ -1,8 +1,10 @@
-"""Rutas HTTP para Plantillas — Sprint 2."""
+"""Rutas HTTP para Plantillas — Sprint 2 + Auth."""
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.session import get_db
+from app.auth.dependencies import get_current_user
+from app.models.usuario import Usuario
 from app.schemas.plantilla import (
     PlantillaCreate,
     PlantillaDesdeDocumento,
@@ -16,72 +18,48 @@ from app.services.plantilla_service import (
     plantilla_a_response,
 )
 
-# Usuario demo hasta que implementemos auth completa
-DEMO_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-
 router = APIRouter(prefix="/plantillas", tags=["plantillas"])
 
 
-# ---------------------------------------------------------------------------
-# GET /plantillas — listar todas las plantillas del usuario
-# ---------------------------------------------------------------------------
-
 @router.get("/", response_model=list[PlantillaResponse])
-def listar(db: Session = Depends(get_db)):
-    """Lista todas las plantillas del usuario actual."""
-    plantillas = listar_plantillas(db, DEMO_USER_ID)
+def listar(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    plantillas = listar_plantillas(db, usuario.id)
     return [plantilla_a_response(p) for p in plantillas]
 
 
-# ---------------------------------------------------------------------------
-# POST /plantillas — crear plantilla manualmente
-# ---------------------------------------------------------------------------
-
 @router.post("/", response_model=PlantillaResponse, status_code=status.HTTP_201_CREATED)
-def crear(datos: PlantillaCreate, db: Session = Depends(get_db)):
-    """Crea una nueva plantilla con secciones definidas manualmente."""
-    plantilla = crear_plantilla(db, DEMO_USER_ID, datos)
+def crear(
+    datos: PlantillaCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    plantilla = crear_plantilla(db, usuario.id, datos)
     return plantilla_a_response(plantilla)
 
 
-# ---------------------------------------------------------------------------
-# POST /plantillas/desde-documento — crear plantilla desde documento analizado
-# ---------------------------------------------------------------------------
-
-@router.post(
-    "/desde-documento",
-    response_model=PlantillaResponse,
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("/desde-documento", response_model=PlantillaResponse, status_code=status.HTTP_201_CREATED)
 def crear_desde_documento(
     datos: PlantillaDesdeDocumento,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
 ):
-    """
-    Genera una plantilla automáticamente a partir de las estructuras
-    detectadas en un documento ya analizado.
-    """
     try:
-        plantilla = crear_plantilla_desde_documento(db, DEMO_USER_ID, datos)
+        plantilla = crear_plantilla_desde_documento(db, usuario.id, datos)
         return plantilla_a_response(plantilla)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-
-# ---------------------------------------------------------------------------
-# GET /plantillas/{id} — obtener una plantilla específica
-# ---------------------------------------------------------------------------
 
 @router.get("/{plantilla_id}", response_model=PlantillaResponse)
-def obtener(plantilla_id: uuid.UUID, db: Session = Depends(get_db)):
-    """Obtiene una plantilla por su ID."""
-    plantilla = obtener_plantilla(db, plantilla_id, DEMO_USER_ID)
+def obtener(
+    plantilla_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    plantilla = obtener_plantilla(db, plantilla_id, usuario.id)
     if not plantilla:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Plantilla {plantilla_id} no encontrada.",
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plantilla {plantilla_id} no encontrada.")
     return plantilla_a_response(plantilla)

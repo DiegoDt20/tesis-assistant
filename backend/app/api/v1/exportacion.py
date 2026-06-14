@@ -1,29 +1,34 @@
-"""Rutas HTTP para Exportación — Sprint 5."""
+"""Rutas HTTP para Exportación — Sprint 5 + Auth."""
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from app.database.session import get_db
+from app.auth.dependencies import get_current_user
+from app.models.usuario import Usuario
 from app.models.proyecto import Proyecto
 from app.models.plantilla import Plantilla
 from app.services.exportacion_service import exportar_a_docx
 
-# Usuario demo
-DEMO_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-
 router = APIRouter(prefix="/exportacion", tags=["exportacion"])
 
+
+# ---------------------------------------------------------------------------
+# GET /exportacion/{proyecto_id}/docx
+# Exporta el proyecto como archivo .docx descargable
+# ---------------------------------------------------------------------------
 
 @router.get("/{proyecto_id}/docx")
 def exportar_docx(
     proyecto_id: uuid.UUID,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
 ):
     """Exporta el proyecto completo como archivo .docx descargable."""
-    # Obtener el proyecto
+    # Obtener el proyecto verificando que pertenece al usuario
     proyecto = db.query(Proyecto).filter(
         Proyecto.id == proyecto_id,
-        Proyecto.usuario_id == DEMO_USER_ID,
+        Proyecto.usuario_id == usuario.id,
     ).first()
     if not proyecto:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado.")

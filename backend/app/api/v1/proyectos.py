@@ -1,8 +1,10 @@
-"""Rutas HTTP para Proyectos — Sprint 3."""
+"""Rutas HTTP para Proyectos — Sprint 3 + Auth."""
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.session import get_db
+from app.auth.dependencies import get_current_user
+from app.models.usuario import Usuario
 from app.schemas.proyecto import ProyectoCreate, RespuestaCreate, ProyectoResponse
 from app.services.proyecto_service import (
     crear_proyecto,
@@ -12,9 +14,6 @@ from app.services.proyecto_service import (
     proyecto_a_response,
 )
 
-# Usuario demo hasta que implementemos auth completa
-DEMO_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
-
 router = APIRouter(prefix="/proyectos", tags=["proyectos"])
 
 
@@ -23,9 +22,12 @@ router = APIRouter(prefix="/proyectos", tags=["proyectos"])
 # ---------------------------------------------------------------------------
 
 @router.get("/", response_model=list[ProyectoResponse])
-def listar(db: Session = Depends(get_db)):
+def listar(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
     """Lista todos los proyectos del usuario actual."""
-    proyectos = listar_proyectos(db, DEMO_USER_ID)
+    proyectos = listar_proyectos(db, usuario.id)
     return [proyecto_a_response(p) for p in proyectos]
 
 
@@ -34,16 +36,17 @@ def listar(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @router.post("/", response_model=ProyectoResponse, status_code=status.HTTP_201_CREATED)
-def crear(datos: ProyectoCreate, db: Session = Depends(get_db)):
+def crear(
+    datos: ProyectoCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
     """Crea un nuevo proyecto asociado a una plantilla."""
     try:
-        proyecto = crear_proyecto(db, DEMO_USER_ID, datos)
+        proyecto = crear_proyecto(db, usuario.id, datos)
         return proyecto_a_response(proyecto)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -51,9 +54,13 @@ def crear(datos: ProyectoCreate, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @router.get("/{proyecto_id}", response_model=ProyectoResponse)
-def obtener(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
+def obtener(
+    proyecto_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
     """Obtiene un proyecto por su ID."""
-    proyecto = obtener_proyecto(db, proyecto_id, DEMO_USER_ID)
+    proyecto = obtener_proyecto(db, proyecto_id, usuario.id)
     if not proyecto:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -66,24 +73,19 @@ def obtener(proyecto_id: uuid.UUID, db: Session = Depends(get_db)):
 # POST /proyectos/{id}/respuestas — guardar respuesta de una sección
 # ---------------------------------------------------------------------------
 
-@router.post(
-    "/{proyecto_id}/respuestas",
-    response_model=ProyectoResponse,
-)
+@router.post("/{proyecto_id}/respuestas", response_model=ProyectoResponse)
 def responder(
     proyecto_id: uuid.UUID,
     datos: RespuestaCreate,
     db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
 ):
     """
     Guarda la respuesta del usuario para una sección específica.
     Este es el corazón del asistente conversacional.
     """
     try:
-        proyecto = guardar_respuesta(db, DEMO_USER_ID, proyecto_id, datos)
+        proyecto = guardar_respuesta(db, usuario.id, proyecto_id, datos)
         return proyecto_a_response(proyecto)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
