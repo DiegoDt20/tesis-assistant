@@ -116,6 +116,9 @@ export default function DashboardPage() {
         <section>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800">Mis Proyectos</h2>
+            <a href="/proyectos/nuevo" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+              + Nuevo proyecto
+            </a>
           </div>
 
           {proyectos.length === 0 ? (
