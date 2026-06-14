@@ -16,7 +16,7 @@ def _estructura_a_seccion(est: Estructura, orden: int) -> dict:
     hijos = [
         _estructura_a_seccion(hijo, i + 1)
         for i, hijo in enumerate(
-            sorted(est.hijos, key=lambda h: h.orden)
+            sorted(est.hijos or [], key=lambda h: h.orden)
         )
     ]
     return {

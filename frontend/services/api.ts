@@ -34,8 +34,11 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = getToken();
 
+  // Si el body es FormData no agregamos Content-Type (el browser lo pone solo)
+  const isFormData = init?.body instanceof FormData;
+
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(init?.headers ?? {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
@@ -46,7 +49,6 @@ export async function apiFetch<T>(
   });
 
   if (!res.ok) {
-    // Si el token expiró, limpiar y redirigir al login
     if (res.status === 401) {
       removeToken();
       if (typeof window !== "undefined") {
